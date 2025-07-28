@@ -2,11 +2,13 @@ import streamlit as st
 import pandas as pd
 import requests
 import time
+import re
 from io import BytesIO
 
 # --- Google Books API Query ---
 def fetch_book_data(isbn):
-    url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{isbn}"
+    normalized_isbn = re.sub(r'\D', '', isbn)  # Remove non-digit characters
+    url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{normalized_isbn}"
     response = requests.get(url)
     if response.status_code == 200:
         items = response.json().get("items")
@@ -26,10 +28,10 @@ def fetch_book_data(isbn):
 # --- Streamlit UI ---
 st.title("📚 ISBN Metadata Enrichment Tool")
 
-uploaded_file = st.file_uploader("Upload Excel file with ISBNs (no header, ISBNs in column A)", type=["xlsx"])
+uploaded_file = st.file_uploader("Upload Excel file with ISBNs", type=["xlsx"])
 
 if uploaded_file:
-    df = pd.read_excel(uploaded_file, header=None, engine="openpyxl")  # No header
+    df = pd.read_excel(uploaded_file, header=None)  # No header
     isbn_list = df.iloc[:, 0].dropna().astype(str).str.strip().tolist()
 
     st.write(f"Found {len(isbn_list)} ISBNs. Starting enrichment...")
