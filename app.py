@@ -4,26 +4,11 @@ import requests
 import time
 import re
 from io import BytesIO
-
 # --- Google Books API Query ---
-def fetch_book_data(isbn):
-    normalized_isbn = re.sub(r'\D', '', isbn)  # Remove non-digit characters
-    url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{normalized_isbn}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        items = response.json().get("items")
-        if items:
-            volume_info = items[0]["volumeInfo"]
-            return {
-                "ISBN": isbn,
-                "Title": volume_info.get("title", ""),
-                "Authors": ", ".join(volume_info.get("authors", [])),
-                "Publisher": volume_info.get("publisher", ""),
-                "Published Date": volume_info.get("publishedDate", ""),
-                "Categories": ", ".join(volume_info.get("categories", [])),
-                "Description": volume_info.get("description", "")
-            }
-    return {"ISBN": isbn, "Title": "Not Found"}
+
+from book_utils import fetch_book_data
+
+
 
 # --- Streamlit UI ---
 st.title("📚 ISBN Metadata Enrichment Tool")
@@ -51,8 +36,8 @@ if uploaded_file:
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         enriched_df.to_excel(writer, index=False, sheet_name='Enriched Data')
     st.download_button(
-        label="📥 Download Enriched Excel",
+        label="📥 Download Books Excel",
         data=output.getvalue(),
-        file_name="enriched_isbn_data.xlsx",
+        file_name="books_data.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )

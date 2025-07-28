@@ -1,32 +1,38 @@
-import requests
-import re
 import unittest
+from book_utils import fetch_book_data  # Ensure book_utils.py is in the same directory or importable
 
-def fetch_title_from_isbn(isbn):
-    normalized_isbn = re.sub(r'\D', '', isbn)
-    url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{normalized_isbn}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        items = response.json().get("items")
-        if items:
-            volume_info = items[0]["volumeInfo"]
-            return volume_info.get("title", "Title Not Found")
-    return "Title Not Found"
-
-class TestISBNLookup(unittest.TestCase):
-    def test_fetch_title_with_dashes(self):
-        isbn = "978-0143127741"
-        title = fetch_title_from_isbn(isbn)
-        print(f"Title for ISBN {isbn}: {title}")
-        self.assertIsInstance(title, str)
-        self.assertNotEqual(title, "Title Not Found")
-
-    def test_fetch_title_without_dashes(self):
+class TestFetchBookData(unittest.TestCase):
+    def test_valid_isbn(self):
         isbn = "9780143127741"
-        title = fetch_title_from_isbn(isbn)
-        print(f"Title for ISBN {isbn}: {title}")
-        self.assertIsInstance(title, str)
-        self.assertNotEqual(title, "Title Not Found")
+        result = fetch_book_data(isbn)
+        print(result)
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["ISBN"], isbn)
+        self.assertNotEqual(result["Title"], "Not Found")
+
+    def test_invalid_isbn(self):
+        isbn = "0000000000000"
+        result = fetch_book_data(isbn)
+        print(result)
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["Title"], "Not Found")
+
+    def test_null_isbn(self):
+        isbn = ""
+        result = fetch_book_data(isbn)
+        print(result)
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["Title"], "Not Found")
+
+def manual_isbn_lookup(isbn):
+    result = fetch_book_data(isbn)
+    print("\nBook Metadata:")
+    for key, value in result.items():
+        print(f"{key}: {value}")
 
 if __name__ == "__main__":
-    unittest.main()
+    choice = input("Type 'T' to run tests or enter an ISBN to look it up: ").strip()
+    if choice.lower() == "t":
+        unittest.main()
+    else:
+        manual_isbn_lookup(choice)
