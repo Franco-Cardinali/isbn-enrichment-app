@@ -6,6 +6,21 @@ from io import BytesIO
 from datetime import datetime
 from book_utils import fetch_book_data
 
+
+
+
+# Load version from file
+version = "v1.0.0"
+try:
+    with open("VERSION", "r") as f:
+        version = f.read().strip()
+except FileNotFoundError:
+    pass
+
+# Show version in sidebar
+st.sidebar.markdown(f"**App Version:** {version}")
+
+
 # --- Session State Initialization ---
 if "lookup_done" not in st.session_state:
     st.session_state.lookup_done = False
