@@ -17,19 +17,14 @@ if "process_time" not in st.session_state:
     st.session_state.process_time = 0
 if "failed_logs" not in st.session_state:
     st.session_state.failed_logs = []
+if "last_uploaded_filename" not in st.session_state:
+    st.session_state.last_uploaded_filename = None
 
 # --- Streamlit UI ---
 st.title("📚 ISBN Metadata Enrichment Tool")
 
 # --- File Upload Section ---
 uploaded_file = st.file_uploader("Upload Excel file with ISBNs", type=["xlsx"])
-if uploaded_file:
-    # Reset session state on new upload
-    st.session_state.lookup_done = False
-    st.session_state.enriched_data = []
-    st.session_state.not_found_isbns = []
-    st.session_state.process_time = 0
-    st.session_state.failed_logs = []
 
 # --- Concurrency Control ---
 max_workers = 10  # Safer default to avoid overwhelming APIs
@@ -70,22 +65,32 @@ def parallel_lookup(isbn_list, max_workers=10):
             status_text.text(f"Processed {completed} of {total} ISBNs")
 
     return enriched_data, not_found_isbns, failed_logs
+
 # --- Process Uploaded File ---
-if uploaded_file and not st.session_state.lookup_done:
-    df = pd.read_excel(uploaded_file, header=None, engine='openpyxl')  # No header
-    isbn_list = df.iloc[:, 0].dropna().astype(str).str.strip().tolist()
+if uploaded_file:
+    if uploaded_file.name != st.session_state.last_uploaded_filename:
+        st.session_state.last_uploaded_filename = uploaded_file.name
+        st.session_state.lookup_done = False
+        st.session_state.enriched_data = []
+        st.session_state.not_found_isbns = []
+        st.session_state.process_time = 0
+        st.session_state.failed_logs = []
 
-    st.write(f"Found {len(isbn_list)} ISBNs. Starting lookups...")
+    if not st.session_state.lookup_done:
+        df = pd.read_excel(uploaded_file, header=None, engine='openpyxl')  # No header
+        isbn_list = df.iloc[:, 0].dropna().astype(str).str.strip().tolist()
 
-    start_time = time.time()
-    enriched_data, not_found_isbns, failed_logs = parallel_lookup(isbn_list, max_workers=max_workers)
-    end_time = time.time()
+        st.write(f"Found {len(isbn_list)} ISBNs. Starting lookups...")
 
-    st.session_state.enriched_data = enriched_data
-    st.session_state.not_found_isbns = not_found_isbns
-    st.session_state.failed_logs = failed_logs
-    st.session_state.process_time = end_time - start_time
-    st.session_state.lookup_done = True
+        start_time = time.time()
+        enriched_data, not_found_isbns, failed_logs = parallel_lookup(isbn_list, max_workers=max_workers)
+        end_time = time.time()
+
+        st.session_state.enriched_data = enriched_data
+        st.session_state.not_found_isbns = not_found_isbns
+        st.session_state.failed_logs = failed_logs
+        st.session_state.process_time = end_time - start_time
+        st.session_state.lookup_done = True
 
 # --- Display Results and Download Buttons ---
 if st.session_state.lookup_done:
