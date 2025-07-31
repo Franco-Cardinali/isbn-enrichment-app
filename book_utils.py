@@ -70,15 +70,18 @@ def fetch_openlibrary(isbn):
 def fetch_book_data(isbn):
     clean_isbn = isbn.replace("-", "").strip()
     result = fetch_google_books(clean_isbn)
-    if result and result.get("Title"):
+
+    # Only accept Google result if it's valid
+    if result and result.get("Title") and result.get("Title") != "Not Found" and "Error" not in result:
         result["Source"] = "Google Books"
         return result
 
     fallback = fetch_openlibrary(clean_isbn)
-    if fallback and fallback.get("Title"):
+    if fallback and fallback.get("Title") and fallback.get("Title") != "Not Found":
         fallback["Source"] = "OpenLibrary"
         return fallback
 
     return {"ISBN": isbn, "Title": "Not Found", "Source": "None"}
+
 
 
