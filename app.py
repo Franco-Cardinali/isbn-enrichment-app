@@ -2,12 +2,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import streamlit as st
 import pandas as pd
 import time
+import html
 from io import BytesIO
 from datetime import datetime
 from book_utils import fetch_book_data
-
-
-
 
 # Load version from file
 version = "v1.0.0"
@@ -19,7 +17,6 @@ except FileNotFoundError:
 
 # Show version in sidebar
 st.sidebar.markdown(f"**App Version:** {version}")
-
 
 # --- Session State Initialization ---
 if "lookup_done" not in st.session_state:
@@ -42,7 +39,7 @@ st.title("📚 ISBN Metadata Enrichment Tool")
 uploaded_file = st.file_uploader("Upload Excel file with ISBNs", type=["xlsx"])
 
 # --- Concurrency Control ---
-max_workers = 10  # Safer default to avoid overwhelming APIs
+max_workers = 10
 
 def parallel_lookup(isbn_list, max_workers=10):
     enriched_data = []
@@ -93,7 +90,14 @@ if uploaded_file:
 
     if not st.session_state.lookup_done:
         df = pd.read_excel(uploaded_file, header=None, engine='openpyxl')  # No header
-        isbn_list = df.iloc[:, 0].dropna().astype(str).str.strip().tolist()
+        isbn_list = (
+            df.iloc[:, 0]
+            .dropna()
+            .astype(str)
+            .str.replace("-", "", regex=False)  # Normalize by removing hyphens
+            .str.strip()
+            .tolist()
+        )
 
         st.write(f"Found {len(isbn_list)} ISBNs. Starting lookups...")
 
@@ -116,7 +120,14 @@ if st.session_state.lookup_done:
 
     output_found = BytesIO()
     with pd.ExcelWriter(output_found, engine='xlsxwriter') as writer:
-        found_df.to_excel(writer, index=False, sheet_name='Enriched Data')
+        cols = [
+            "ISBN", "Title", "Authors", "Publisher", "PublishedDate",
+            "Description", "PageCount", "Categories", "Language",
+            "PreviewLink", "Identifiers"
+        ]
+        export_cols = [col for col in cols if col in found_df.columns]
+        found_df[export_cols].to_excel(writer, index=False, sheet_name='Enriched Data')
+
     st.download_button(
         label="📥 Download Found Metadata Excel",
         data=output_found.getvalue(),
@@ -146,7 +157,6 @@ if st.session_state.lookup_done:
 
     st.success("✅ Process finished!")
 
-    # Format processing time
     total_seconds = int(st.session_state.process_time)
     if total_seconds >= 60:
         minutes = total_seconds // 60
@@ -156,7 +166,6 @@ if st.session_state.lookup_done:
         formatted_time = f"{total_seconds} second(s)"
     st.info(f"⏱️ Total processing time: {formatted_time}")
 
-    # Display summary with color-coded boxes
     total_count = len(st.session_state.enriched_data)
     found_count = len(found_df)
     not_found_count = len(st.session_state.not_found_isbns)
@@ -175,10 +184,47 @@ if st.session_state.lookup_done:
 
 # --- Single ISBN Lookup Section ---
 st.header("🔍 Single ISBN Lookup")
-single_isbn = st.text_input("Enter an ISBN to look up")
 
-if single_isbn:
+# Custom styling for the input field
+st.markdown("""
+    <style>
+    .stTextInput > div > div > input {
+        background-color: #f0f8ff;
+        border: 2px solid #4B8BBE;
+        border-radius: 5px;
+        padding: 5px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Create a single column for input and button
+with st.container():
+    col_input, col_button = st.columns([4, 1])  # Adjust ratio as needed
+    with col_input:
+        single_isbn = st.text_input("Enter an ISBN to look up")
+
+    with col_button:
+        st.markdown("<br>", unsafe_allow_html=True)  # Adds vertical spacing to align with input
+        lookup_triggered = st.button("Lookup")
+
+# Only run lookup if button is clicked and input is not empty
+if single_isbn and lookup_triggered:
     result = fetch_book_data(single_isbn)
-    st.subheader("Book Metadata")
+    st.subheader("📚 Book Metadata")
     for key, value in result.items():
-        st.write(f"**{key}**: {value}")
+        if value:
+            if key == "PreviewLink" and isinstance(value, str) and value.startswith("http"):
+                clean_url = html.unescape(value)
+                st.markdown(f'<a href="{clean_url}" target="_blank">View Book Preview</a>', unsafe_allow_html=True)
+            elif key == "PreviewLink":
+                continue
+
+            else:
+                st.write(f"**{key}**: {value}")
+
+
+
+
+
+
+

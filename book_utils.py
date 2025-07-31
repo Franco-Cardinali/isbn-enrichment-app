@@ -17,7 +17,15 @@ def fetch_google_books(isbn, retries=3, delay=1):
                         "Title": volume_info.get("title", ""),
                         "Authors": ", ".join(volume_info.get("authors", [])),
                         "Publisher": volume_info.get("publisher", ""),
-                        "PublishedDate": volume_info.get("publishedDate", "")
+                        "PublishedDate": volume_info.get("publishedDate", ""),
+                        "Description": volume_info.get("description", ""),
+                        "PageCount": volume_info.get("pageCount", ""),
+                        "Categories": ", ".join(volume_info.get("categories", [])),
+                        "Language": volume_info.get("language", ""),
+                        "PreviewLink": volume_info.get("previewLink", ""),
+                        "Identifiers": ", ".join(
+                            f"{id['type']}: {id['identifier']}" for id in volume_info.get("industryIdentifiers", [])
+                        )
                     }
         except requests.RequestException:
             time.sleep(delay)
@@ -36,17 +44,28 @@ def fetch_openlibrary(isbn):
                     "Title": book.get("title", ""),
                     "Authors": ", ".join(author["name"] for author in book.get("authors", [])),
                     "Publisher": book.get("publishers", [{}])[0].get("name", ""),
-                    "PublishedDate": book.get("publish_date", "")
+                    "PublishedDate": book.get("publish_date", ""),
+                    "Description": book.get("excerpt", {}).get("value", ""),
+                    "PageCount": book.get("number_of_pages", ""),
+                    "Categories": ", ".join(
+                        subject["name"] if isinstance(subject, dict) else str(subject)
+                        for subject in book.get("subjects", [])
+                    ),
+                    "Language": book.get("languages", [{}])[0].get("key", "").split("/")[-1] if book.get("languages") else "",
+                    "PreviewLink": book.get("url", ""),
+                    "Identifiers": f"ISBN_13: {isbn}"
                 }
     except requests.RequestException:
         pass
     return None
 
 def fetch_book_data(isbn):
-    result = fetch_google_books(isbn)
+    clean_isbn = isbn.replace("-", "").strip()
+    result = fetch_google_books(clean_isbn)
     if result and result.get("Title"):
         return result
-    fallback = fetch_openlibrary(isbn)
+    fallback = fetch_openlibrary(clean_isbn)
     if fallback and fallback.get("Title"):
         return fallback
     return {"ISBN": isbn, "Title": "Not Found"}
+

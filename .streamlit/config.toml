@@ -6,11 +6,11 @@ textColor = "#262730"
 font = "sans serif"
 
 [server]
-showErrorDetails = false
 enableCORS = false
 enableXsrfProtection = false
 headless = true
 runOnSave = true
 enableWebsocketCompression = true
 port = 8501
-viewSource = false  #  This hides the “View Source” button
+# showErrorDetails = false  # ❌ Deprecated
+# viewSource = false        # ❌ Deprecated
