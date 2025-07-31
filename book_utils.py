@@ -25,11 +25,17 @@ def fetch_google_books(isbn, retries=3, delay=1):
                         "PreviewLink": volume_info.get("previewLink", ""),
                         "Identifiers": ", ".join(
                             f"{id['type']}: {id['identifier']}" for id in volume_info.get("industryIdentifiers", [])
-                        )
+                        ),
+                        "Source": "Google Books"
                     }
-        except requests.RequestException:
+                else:
+                    return {"ISBN": isbn, "Title": "Not Found", "Error": "No items found", "Source": "Google Books"}
+            else:
+                return {"ISBN": isbn, "Title": "Not Found", "Error": f"HTTP {response.status_code}", "Source": "Google Books"}
+        except requests.RequestException as e:
             time.sleep(delay)
-    return None
+            return {"ISBN": isbn, "Title": "Not Found", "Error": str(e), "Source": "Google Books"}
+
 
 def fetch_openlibrary(isbn):
     try:
@@ -53,19 +59,26 @@ def fetch_openlibrary(isbn):
                     ),
                     "Language": book.get("languages", [{}])[0].get("key", "").split("/")[-1] if book.get("languages") else "",
                     "PreviewLink": book.get("url", ""),
-                    "Identifiers": f"ISBN_13: {isbn}"
+                    "Identifiers": f"ISBN_13: {isbn}",
+                    "Source": "OpenLibrary"
                 }
     except requests.RequestException:
         pass
     return None
 
+
 def fetch_book_data(isbn):
     clean_isbn = isbn.replace("-", "").strip()
     result = fetch_google_books(clean_isbn)
     if result and result.get("Title"):
+        result["Source"] = "Google Books"
         return result
+
     fallback = fetch_openlibrary(clean_isbn)
     if fallback and fallback.get("Title"):
+        fallback["Source"] = "OpenLibrary"
         return fallback
-    return {"ISBN": isbn, "Title": "Not Found"}
+
+    return {"ISBN": isbn, "Title": "Not Found", "Source": "None"}
+
 

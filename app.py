@@ -123,7 +123,7 @@ if st.session_state.lookup_done:
         cols = [
             "ISBN", "Title", "Authors", "Publisher", "PublishedDate",
             "Description", "PageCount", "Categories", "Language",
-            "PreviewLink", "Identifiers"
+            "PreviewLink", "Identifiers", "Source"
         ]
         export_cols = [col for col in cols if col in found_df.columns]
         found_df[export_cols].to_excel(writer, index=False, sheet_name='Enriched Data')
