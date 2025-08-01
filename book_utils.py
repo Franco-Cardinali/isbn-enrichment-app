@@ -2,7 +2,8 @@ import streamlit as st
 import requests
 import time
 
-GOOGLE_API_KEY = st.secrets.get("api", {}).get("google_books_key", None)
+
+GOOGLE_API_KEY = st.secrets["google_books_key"]
 GOOGLE_API_URL = "https://www.googleapis.com/books/v1/volumes?q=isbn:{}&key={}"
 OPENLIBRARY_API_URL = "https://openlibrary.org/api/books?bibkeys=ISBN:{}&format=json&jscmd=data"
 
