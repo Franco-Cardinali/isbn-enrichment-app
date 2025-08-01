@@ -9,6 +9,9 @@ OPENLIBRARY_API_URL = "https://openlibrary.org/api/books?bibkeys=ISBN:{}&format=
 
 def fetch_google_books(isbn, retries=3, delay=1):
     if not GOOGLE_API_KEY:
+        log_entry = f"[Google API] ISBN: {isbn} | Missing API key"
+        if "api_logs" in st.session_state:
+            st.session_state.api_logs.append(log_entry)
         return {
             "ISBN": isbn,
             "Title": "Not Found",
@@ -22,13 +25,15 @@ def fetch_google_books(isbn, retries=3, delay=1):
         }
 
     endpoint_url = GOOGLE_API_URL.format(isbn, GOOGLE_API_KEY)
-    st.write("🔍 Google Books API Endpoint:", endpoint_url)
     masked_key = GOOGLE_API_KEY[:4] + "..." + GOOGLE_API_KEY[-4:]
 
     for attempt in range(retries):
         try:
             response = requests.get(endpoint_url, timeout=5)
-            st.write("📡 Google Books API Response Status:", response.status_code)
+            log_entry = f"[Google API] ISBN: {isbn} | Attempt {attempt+1} | URL: {endpoint_url} | Status: {response.status_code}"
+            if "api_logs" in st.session_state:
+                st.session_state.api_logs.append(log_entry)
+
             if response.status_code == 200:
                 data = response.json()
                 if "items" in data and data["items"]:
@@ -74,6 +79,10 @@ def fetch_google_books(isbn, retries=3, delay=1):
                     }
                 }
         except requests.RequestException as e:
+            log_entry = f"[Google API] ISBN: {isbn} | Error: {e}"
+            if "api_logs" in st.session_state:
+                st.session_state.api_logs.append(log_entry)
+
             time.sleep(delay)
             return {
                 "ISBN": isbn,
@@ -86,6 +95,7 @@ def fetch_google_books(isbn, retries=3, delay=1):
                     "Error": str(e)
                 }
             }
+
 
 def fetch_openlibrary(isbn):
     try:

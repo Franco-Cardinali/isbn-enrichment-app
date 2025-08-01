@@ -31,6 +31,8 @@ if "failed_logs" not in st.session_state:
     st.session_state.failed_logs = []
 if "last_uploaded_filename" not in st.session_state:
     st.session_state.last_uploaded_filename = None
+if "api_logs" not in st.session_state:
+    st.session_state.api_logs = []
 
 # --- Streamlit UI ---
 st.title("📚 ISBN Metadata Enrichment Tool")
@@ -87,6 +89,7 @@ if uploaded_file:
         st.session_state.not_found_isbns = []
         st.session_state.process_time = 0
         st.session_state.failed_logs = []
+        st.session_state.api_logs = []  # Reset logs
 
     if not st.session_state.lookup_done:
         df = pd.read_excel(uploaded_file, header=None, engine='openpyxl')  # No header
@@ -182,6 +185,14 @@ if st.session_state.lookup_done:
     </div>
     """, unsafe_allow_html=True)
 
+    # Show logs
+    with st.expander("📜 API Call Logs"):
+        if st.session_state.api_logs:
+            for line in st.session_state.api_logs:
+                st.text(line)
+        else:
+            st.write("No logs available.")
+
 # --- Single ISBN Lookup Section ---
 st.header("🔍 Single ISBN Lookup")
 
@@ -218,6 +229,5 @@ if single_isbn and lookup_triggered:
                 st.markdown(f'<a href="{clean_url}" target="_blank">View Book Preview</a>', unsafe_allow_html=True)
             elif key == "PreviewLink":
                 continue
-
             else:
                 st.write(f"**{key}**: {value}")
