@@ -14,3 +14,7 @@ enableWebsocketCompression = true
 port = 8501
 # showErrorDetails = false  # ❌ Deprecated
 # viewSource = false        # ❌ Deprecated
+
+
+[logger]
+level = "info"

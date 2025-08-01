@@ -1,13 +1,16 @@
 import requests
 import time
+import streamlit as st
 
-GOOGLE_API_URL = "https://www.googleapis.com/books/v1/volumes?q=isbn:"
+GOOGLE_API_KEY = st.secrets["api"]["google_books_key"]
+GOOGLE_API_URL = "https://www.googleapis.com/books/v1/volumes?q=isbn:{}&key={}"
 OPENLIBRARY_API_URL = "https://openlibrary.org/api/books?bibkeys=ISBN:{}&format=json&jscmd=data"
+
 
 def fetch_google_books(isbn, retries=3, delay=1):
     for attempt in range(retries):
         try:
-            response = requests.get(GOOGLE_API_URL + isbn, timeout=5)
+            response = requests.get(GOOGLE_API_URL.format(isbn, GOOGLE_API_KEY), timeout=5)
             if response.status_code == 200:
                 data = response.json()
                 if "items" in data and data["items"]:
@@ -42,7 +45,7 @@ def fetch_openlibrary(isbn):
         response = requests.get(OPENLIBRARY_API_URL.format(isbn), timeout=5)
         if response.status_code == 200:
             data = response.json()
-            book_key = f"ISBN:{isbn}"
+            book_key = f"ISBN: {isbn}"
             if book_key in data:
                 book = data[book_key]
                 return {
@@ -82,6 +85,3 @@ def fetch_book_data(isbn):
         return fallback
 
     return {"ISBN": isbn, "Title": "Not Found", "Source": "None"}
-
-
-

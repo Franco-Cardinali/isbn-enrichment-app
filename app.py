@@ -221,10 +221,3 @@ if single_isbn and lookup_triggered:
 
             else:
                 st.write(f"**{key}**: {value}")
-
-
-
-
-
-
-
