@@ -22,11 +22,13 @@ def fetch_google_books(isbn, retries=3, delay=1):
         }
 
     endpoint_url = GOOGLE_API_URL.format(isbn, GOOGLE_API_KEY)
+    st.write("🔍 Google Books API Endpoint:", endpoint_url)
     masked_key = GOOGLE_API_KEY[:4] + "..." + GOOGLE_API_KEY[-4:]
 
     for attempt in range(retries):
         try:
             response = requests.get(endpoint_url, timeout=5)
+            st.write("📡 Google Books API Response Status:", response.status_code)
             if response.status_code == 200:
                 data = response.json()
                 if "items" in data and data["items"]:

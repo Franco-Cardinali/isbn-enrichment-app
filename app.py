@@ -5,7 +5,7 @@ import time
 import html
 from io import BytesIO
 from datetime import datetime
-from book_utils import fetch_book_data
+from book_utils_6_logged import fetch_book_data
 
 # Load version from file
 version = "v1.0.0"
