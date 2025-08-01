@@ -19,3 +19,4 @@ dist/
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
+.streamlit/secrets.toml
