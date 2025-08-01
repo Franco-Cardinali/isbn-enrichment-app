@@ -47,6 +47,7 @@ def parallel_lookup(isbn_list, max_workers=10):
     enriched_data = []
     not_found_isbns = []
     failed_logs = []
+    shared_log = []  # Thread-safe log container
 
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -55,7 +56,7 @@ def parallel_lookup(isbn_list, max_workers=10):
 
     def safe_fetch(isbn):
         try:
-            return fetch_book_data(isbn)
+            return fetch_book_data(isbn, log_list=shared_log)
         except Exception as e:
             return {"ISBN": isbn, "Title": "Not Found", "Error": str(e)}
 
@@ -78,7 +79,10 @@ def parallel_lookup(isbn_list, max_workers=10):
             progress_bar.progress(completed / total)
             status_text.text(f"Processed {completed} of {total} ISBNs")
 
+    # Store collected logs to session for rendering
+    st.session_state.api_logs = shared_log
     return enriched_data, not_found_isbns, failed_logs
+
 
 # --- Process Uploaded File ---
 if uploaded_file:
