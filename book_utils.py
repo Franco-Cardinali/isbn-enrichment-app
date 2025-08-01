@@ -2,18 +2,30 @@ import streamlit as st
 import requests
 import time
 
-# Safe retrieval of API key
 GOOGLE_API_KEY = st.secrets.get("api", {}).get("google_books_key", None)
 GOOGLE_API_URL = "https://www.googleapis.com/books/v1/volumes?q=isbn:{}&key={}"
 OPENLIBRARY_API_URL = "https://openlibrary.org/api/books?bibkeys=ISBN:{}&format=json&jscmd=data"
 
 def fetch_google_books(isbn, retries=3, delay=1):
     if not GOOGLE_API_KEY:
-        return {"ISBN": isbn, "Title": "Not Found", "Error": "Missing Google Books API key", "Source": "Google Books"}
+        return {
+            "ISBN": isbn,
+            "Title": "Not Found",
+            "Error": "Missing Google Books API key",
+            "Source": "Google Books",
+            "Log": {
+                "Endpoint": "N/A",
+                "API_Key": "N/A",
+                "Error": "Missing API key"
+            }
+        }
+
+    endpoint_url = GOOGLE_API_URL.format(isbn, GOOGLE_API_KEY)
+    masked_key = GOOGLE_API_KEY[:4] + "..." + GOOGLE_API_KEY[-4:]
 
     for attempt in range(retries):
         try:
-            response = requests.get(GOOGLE_API_URL.format(isbn, GOOGLE_API_KEY), timeout=5)
+            response = requests.get(endpoint_url, timeout=5)
             if response.status_code == 200:
                 data = response.json()
                 if "items" in data and data["items"]:
@@ -35,12 +47,42 @@ def fetch_google_books(isbn, retries=3, delay=1):
                         "Source": "Google Books"
                     }
                 else:
-                    return {"ISBN": isbn, "Title": "Not Found", "Error": "No items found", "Source": "Google Books"}
+                    return {
+                        "ISBN": isbn,
+                        "Title": "Not Found",
+                        "Error": "No items found",
+                        "Source": "Google Books",
+                        "Log": {
+                            "Endpoint": endpoint_url,
+                            "API_Key": masked_key,
+                            "Error": "No items found"
+                        }
+                    }
             else:
-                return {"ISBN": isbn, "Title": "Not Found", "Error": f"HTTP {response.status_code}", "Source": "Google Books"}
+                return {
+                    "ISBN": isbn,
+                    "Title": "Not Found",
+                    "Error": f"HTTP {response.status_code}",
+                    "Source": "Google Books",
+                    "Log": {
+                        "Endpoint": endpoint_url,
+                        "API_Key": masked_key,
+                        "Error": f"HTTP {response.status_code}"
+                    }
+                }
         except requests.RequestException as e:
             time.sleep(delay)
-            return {"ISBN": isbn, "Title": "Not Found", "Error": str(e), "Source": "Google Books"}
+            return {
+                "ISBN": isbn,
+                "Title": "Not Found",
+                "Error": str(e),
+                "Source": "Google Books",
+                "Log": {
+                    "Endpoint": endpoint_url,
+                    "API_Key": masked_key,
+                    "Error": str(e)
+                }
+            }
 
 def fetch_openlibrary(isbn):
     try:
@@ -84,4 +126,10 @@ def fetch_book_data(isbn):
         fallback["Source"] = "OpenLibrary"
         return fallback
 
-    return {"ISBN": isbn, "Title": "Not Found", "Source": "None"}
+    return {
+        "ISBN": isbn,
+        "Title": "Not Found",
+        "Source": "None",
+        "Error": result.get("Error", "Unknown error"),
+        "Log": result.get("Log", {})
+    }
