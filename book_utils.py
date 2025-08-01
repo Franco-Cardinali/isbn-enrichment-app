@@ -1,13 +1,15 @@
+import streamlit as st
 import requests
 import time
-import streamlit as st
 
-GOOGLE_API_KEY = st.secrets["api"]["google_books_key"]
+GOOGLE_API_KEY = st.secrets.get("api", {}).get("google_books_key", None)
 GOOGLE_API_URL = "https://www.googleapis.com/books/v1/volumes?q=isbn:{}&key={}"
 OPENLIBRARY_API_URL = "https://openlibrary.org/api/books?bibkeys=ISBN:{}&format=json&jscmd=data"
 
-
 def fetch_google_books(isbn, retries=3, delay=1):
+    if not GOOGLE_API_KEY:
+        return {"ISBN": isbn, "Title": "Not Found", "Error": "Missing Google Books API key", "Source": "Google Books"}
+
     for attempt in range(retries):
         try:
             response = requests.get(GOOGLE_API_URL.format(isbn, GOOGLE_API_KEY), timeout=5)
@@ -38,7 +40,6 @@ def fetch_google_books(isbn, retries=3, delay=1):
         except requests.RequestException as e:
             time.sleep(delay)
             return {"ISBN": isbn, "Title": "Not Found", "Error": str(e), "Source": "Google Books"}
-
 
 def fetch_openlibrary(isbn):
     try:
