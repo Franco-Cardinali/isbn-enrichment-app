@@ -1,7 +1,8 @@
 import requests
 import time
+import streamlit as st
 
-GOOGLE_API_KEY = "YOUR_API_KEY"  # You can still use st.secrets["google_books_key"] if it works in your environment
+GOOGLE_API_KEY = st.secrets.get("google_books_key", "")
 GOOGLE_API_URL = "https://www.googleapis.com/books/v1/volumes?q=isbn:{}&key={}"
 OPENLIBRARY_API_URL = "https://openlibrary.org/api/books?bibkeys=ISBN:{}&format=json&jscmd=data"
 
@@ -11,7 +12,7 @@ def fetch_google_books(isbn, retries=3, delay=1, log_list=None):
             log_list.append(msg)
 
     if not GOOGLE_API_KEY:
-        log(f"[Google API] ISBN: {isbn} | Missing API key")
+        log(f"[Google API] ISBN: {isbn} ❌ Missing API key")
         return {
             "ISBN": isbn,
             "Title": "Not Found",
@@ -30,8 +31,7 @@ def fetch_google_books(isbn, retries=3, delay=1, log_list=None):
     for attempt in range(retries):
         try:
             response = requests.get(endpoint_url, timeout=5)
-            log(f"[Google API] ISBN: {isbn} | Attempt {attempt+1} | URL: {endpoint_url} | Status: {response.status_code}")
-
+            log(f"[Google API] ISBN: {isbn} 🔄 Attempt {attempt+1} | URL: {endpoint_url} | Status: {response.status_code}")
             if response.status_code == 200:
                 data = response.json()
                 if "items" in data and data["items"]:
@@ -53,6 +53,7 @@ def fetch_google_books(isbn, retries=3, delay=1, log_list=None):
                         "Source": "Google Books"
                     }
                 else:
+                    log(f"[Google API] ISBN: {isbn} ⚠️ No items found")
                     return {
                         "ISBN": isbn,
                         "Title": "Not Found",
@@ -65,6 +66,7 @@ def fetch_google_books(isbn, retries=3, delay=1, log_list=None):
                         }
                     }
             else:
+                log(f"[Google API] ISBN: {isbn} ❌ HTTP {response.status_code}")
                 return {
                     "ISBN": isbn,
                     "Title": "Not Found",
@@ -77,19 +79,20 @@ def fetch_google_books(isbn, retries=3, delay=1, log_list=None):
                     }
                 }
         except requests.RequestException as e:
-            log(f"[Google API] ISBN: {isbn} | Error: {e}")
+            log(f"[Google API] ISBN: {isbn} ❌ Request error: {e}")
             time.sleep(delay)
-            return {
-                "ISBN": isbn,
-                "Title": "Not Found",
-                "Error": str(e),
-                "Source": "Google Books",
-                "Log": {
-                    "Endpoint": endpoint_url,
-                    "API_Key": masked_key,
-                    "Error": str(e)
-                }
-            }
+
+    return {
+        "ISBN": isbn,
+        "Title": "Not Found",
+        "Error": "Google Books API failed after retries",
+        "Source": "Google Books",
+        "Log": {
+            "Endpoint": endpoint_url,
+            "API_Key": masked_key,
+            "Error": "Request failed"
+        }
+    }
 
 def fetch_openlibrary(isbn):
     try:
@@ -123,7 +126,6 @@ def fetch_openlibrary(isbn):
 def fetch_book_data(isbn, log_list=None):
     clean_isbn = isbn.replace("-", "").strip()
     result = fetch_google_books(clean_isbn, log_list=log_list)
-
     if result and result.get("Title") and result.get("Title") != "Not Found" and "Error" not in result:
         result["Source"] = "Google Books"
         return result
