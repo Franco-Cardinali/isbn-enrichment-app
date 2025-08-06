@@ -3,7 +3,7 @@ import time
 import streamlit as st
 
 GOOGLE_API_KEY = st.secrets.get("google_books_key", "")
-GOOGLE_API_URL = "https://www.googleapis.com/books/v1/volumes?q=isbn:{}&key={}"
+#GOOGLE_API_URL = "https://www.googleapis.com/books/v1/volumes?q=isbn:{}&key={}"
 OPENLIBRARY_API_URL = "https://openlibrary.org/api/books?bibkeys=ISBN:{}&format=json&jscmd=data"
 
 # ✅ Proxy endpoint hosted on Render
