@@ -160,4 +160,3 @@ def fetch_book_data(isbn, log_list=None):
         "Error": result.get("Error", "Unknown error"),
         "Log": result.get("Log", {})
     }
-
