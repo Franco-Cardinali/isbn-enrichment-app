@@ -11,18 +11,45 @@ PROXY_API_URL = "https://isbn-enrichment-app.onrender.com/books?isbn={}"
 
 def fetch_google_books(isbn, retries=3, delay=1, log_list=None):
     def log(msg):
-        print(msg)  # ✅ Force log to appear in Streamlit logs
+        print(msg)
         if log_list is not None:
             log_list.append(msg)
 
     endpoint_url = PROXY_API_URL.format(isbn)
+
     for attempt in range(retries):
         try:
             response = requests.get(endpoint_url, timeout=5)
             log(f"[Proxy API] ISBN: {isbn} 🔄 Attempt {attempt+1} | URL: {endpoint_url} | Status: {response.status_code}")
 
             if response.status_code == 200:
-                return response.json()
+                data = response.json()
+                if "items" in data and data["items"]:
+                    volume_info = data["items"][0]["volumeInfo"]
+                    return {
+                        "ISBN": isbn,
+                        "Title": volume_info.get("title", ""),
+                        "Authors": ", ".join(volume_info.get("authors", [])),
+                        "Publisher": volume_info.get("publisher", ""),
+                        "PublishedDate": volume_info.get("publishedDate", ""),
+                        "Description": volume_info.get("description", ""),
+                        "PageCount": volume_info.get("pageCount", ""),
+                        "Categories": ", ".join(volume_info.get("categories", [])),
+                        "Language": volume_info.get("language", ""),
+                        "PreviewLink": volume_info.get("previewLink", ""),
+                        "Identifiers": ", ".join(
+                            f"{id['type']}: {id['identifier']}" for id in volume_info.get("industryIdentifiers", [])
+                        ),
+                        "Source": "Google Books"
+                    }
+                else:
+                    log(f"[Proxy API] ISBN: {isbn} ⚠️ No items found")
+                    return {
+                        "ISBN": isbn,
+                        "Title": "Not Found",
+                        "Error": "No items found",
+                        "Source": "Google Books"
+                    }
             else:
                 try:
                     error_body = response.json()
@@ -33,11 +60,7 @@ def fetch_google_books(isbn, retries=3, delay=1, log_list=None):
                     "ISBN": isbn,
                     "Title": "Not Found",
                     "Error": f"HTTP {response.status_code}",
-                    "Source": "Proxy",
-                    "Log": {
-                        "Endpoint": endpoint_url,
-                        "Error": error_body
-                    }
+                    "Source": "Google Books"
                 }
         except requests.RequestException as e:
             log(f"[Proxy API] ISBN: {isbn} ❌ Request error: {e}")
@@ -46,23 +69,17 @@ def fetch_google_books(isbn, retries=3, delay=1, log_list=None):
                 "ISBN": isbn,
                 "Title": "Not Found",
                 "Error": str(e),
-                "Source": "Proxy",
-                "Log": {
-                    "Endpoint": endpoint_url,
-                    "Error": str(e)
-                }
+                "Source": "Google Books"
             }
 
     return {
         "ISBN": isbn,
         "Title": "Not Found",
         "Error": "Proxy failed after retries",
-        "Source": "Proxy",
-        "Log": {
-            "Endpoint": endpoint_url,
-            "Error": "Request failed"
-        }
+        "Source": "Google Books"
     }
+
+
 
 def fetch_openlibrary(isbn):
     try:
