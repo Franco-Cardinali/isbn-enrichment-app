@@ -6,95 +6,49 @@ GOOGLE_API_KEY = st.secrets.get("google_books_key", "")
 GOOGLE_API_URL = "https://www.googleapis.com/books/v1/volumes?q=isbn:{}&key={}"
 OPENLIBRARY_API_URL = "https://openlibrary.org/api/books?bibkeys=ISBN:{}&format=json&jscmd=data"
 
+# ✅ Proxy endpoint hosted on Render
+PROXY_API_URL = "https://isbn-enrichment-app.onrender.com/books?isbn={}"
+
 def fetch_google_books(isbn, retries=3, delay=1, log_list=None):
     def log(msg):
         print(msg)  # ✅ Force log to appear in Streamlit logs
         if log_list is not None:
             log_list.append(msg)
 
-    if not GOOGLE_API_KEY:
-        log(f"[Google API] ISBN: {isbn} ❌ Missing API key")
-        return {
-            "ISBN": isbn,
-            "Title": "Not Found",
-            "Error": "Missing Google Books API key",
-            "Source": "Google Books",
-            "Log": {
-                "Endpoint": "N/A",
-                "API_Key": "N/A",
-                "Error": "Missing API key"
-            }
-        }
-
-    endpoint_url = GOOGLE_API_URL.format(isbn, GOOGLE_API_KEY)
-    masked_key = GOOGLE_API_KEY[:4] + "..." + GOOGLE_API_KEY[-4:]
-
+    endpoint_url = PROXY_API_URL.format(isbn)
     for attempt in range(retries):
         try:
             response = requests.get(endpoint_url, timeout=5)
-            log(f"[Google API] ISBN: {isbn} 🔄 Attempt {attempt+1} | URL: {endpoint_url} | Status: {response.status_code}")
+            log(f"[Proxy API] ISBN: {isbn} 🔄 Attempt {attempt+1} | URL: {endpoint_url} | Status: {response.status_code}")
 
             if response.status_code == 200:
-                data = response.json()
-                if "items" in data and data["items"]:
-                    volume_info = data["items"][0]["volumeInfo"]
-                    return {
-                        "ISBN": isbn,
-                        "Title": volume_info.get("title", ""),
-                        "Authors": ", ".join(volume_info.get("authors", [])),
-                        "Publisher": volume_info.get("publisher", ""),
-                        "PublishedDate": volume_info.get("publishedDate", ""),
-                        "Description": volume_info.get("description", ""),
-                        "PageCount": volume_info.get("pageCount", ""),
-                        "Categories": ", ".join(volume_info.get("categories", [])),
-                        "Language": volume_info.get("language", ""),
-                        "PreviewLink": volume_info.get("previewLink", ""),
-                        "Identifiers": ", ".join(
-                            f"{id['type']}: {id['identifier']}" for id in volume_info.get("industryIdentifiers", [])
-                        ),
-                        "Source": "Google Books"
-                    }
-                else:
-                    log(f"[Google API] ISBN: {isbn} ⚠️ No items found")
-                    return {
-                        "ISBN": isbn,
-                        "Title": "Not Found",
-                        "Error": "No items found",
-                        "Source": "Google Books",
-                        "Log": {
-                            "Endpoint": endpoint_url,
-                            "API_Key": masked_key,
-                            "Error": "No items found"
-                        }
-                    }
+                return response.json()
             else:
                 try:
                     error_body = response.json()
                 except ValueError:
                     error_body = response.text
-                log(f"[Google API] ISBN: {isbn} ❌ HTTP {response.status_code} | Response: {error_body}")
+                log(f"[Proxy API] ISBN: {isbn} ❌ HTTP {response.status_code} | Response: {error_body}")
                 return {
                     "ISBN": isbn,
                     "Title": "Not Found",
                     "Error": f"HTTP {response.status_code}",
-                    "Source": "Google Books",
+                    "Source": "Proxy",
                     "Log": {
                         "Endpoint": endpoint_url,
-                        "API_Key": masked_key,
                         "Error": error_body
                     }
                 }
         except requests.RequestException as e:
-            log(f"[Google API] ISBN: {isbn} ❌ Request error: {e}")
+            log(f"[Proxy API] ISBN: {isbn} ❌ Request error: {e}")
             time.sleep(delay)
             return {
                 "ISBN": isbn,
                 "Title": "Not Found",
                 "Error": str(e),
-                "Source": "Google Books",
+                "Source": "Proxy",
                 "Log": {
                     "Endpoint": endpoint_url,
-                    "API_Key": masked_key,
                     "Error": str(e)
                 }
             }
@@ -102,11 +56,10 @@ def fetch_google_books(isbn, retries=3, delay=1, log_list=None):
     return {
         "ISBN": isbn,
         "Title": "Not Found",
-        "Error": "Google Books API failed after retries",
-        "Source": "Google Books",
+        "Error": "Proxy failed after retries",
+        "Source": "Proxy",
         "Log": {
             "Endpoint": endpoint_url,
-            "API_Key": masked_key,
             "Error": "Request failed"
         }
     }

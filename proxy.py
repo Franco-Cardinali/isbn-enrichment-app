@@ -2,6 +2,8 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import requests
+import os
+
 
 app = FastAPI()
 
@@ -13,7 +15,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-GOOGLE_API_KEY = "YOUR_GOOGLE_API_KEY"
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
 
 @app.get("/books")
 def get_book_by_isbn(isbn: str):
